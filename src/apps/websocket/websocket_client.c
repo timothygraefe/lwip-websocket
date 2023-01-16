@@ -101,7 +101,7 @@
 #endif
 
 // function trace for debugging
-#define FNTRACE()   if(wsverbose) { printf("%s\n", __func__) }
+#define FNTRACE()   if(wsverbose) { printf("%s\n", __func__); }
 
 #define WSOCK_POLL_INTERVAL         1
 #define WSOCK_POLL_TIMEOUT          1000
