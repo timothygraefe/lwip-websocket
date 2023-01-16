@@ -2,6 +2,9 @@ INTRODUCTION
 
 lwIP is a small independent implementation of the TCP/IP protocol suite.
 
+This fork adds basic websocket client capability.  It was introduced to
+provide websocket support on the Raspberry Pi Pico W.
+
 The focus of the lwIP TCP/IP implementation is to reduce the RAM usage
 while still having a full scale TCP. This making lwIP suitable for use
 in embedded systems with tens of kilobytes of free RAM and room for
@@ -45,6 +48,8 @@ APPLICATIONS
   * MDNS (Multicast DNS) responder
   * iPerf server implementation
   * MQTT client (TLS support via altcp)
+  
+  * Websocket client
 
 
 LICENSE
