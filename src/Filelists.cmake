@@ -176,6 +176,13 @@ set(lwiphttp_SRCS
     ${LWIP_DIR}/src/apps/http/httpd.c
 )
 
+# websocket client
+set(lwipwebsocket_SRCS
+    ${LWIP_DIR}/src/apps/websocket/websocket_client.c
+    ${LWIP_DIR}/src/apps/websocket/base64-decode.c
+    ${LWIP_DIR}/src/apps/websocket/sha-1.c
+)
+
 # MAKEFSDATA HTTP server host utility
 set(lwipmakefsdata_SRCS
     ${LWIP_DIR}/src/apps/http/makefsdata/makefsdata.c
@@ -240,6 +247,7 @@ set(lwipnoapps_SRCS
 set(lwipallapps_SRCS
     ${lwipsnmp_SRCS}
     ${lwiphttp_SRCS}
+    ${lwipwebsocket_SRCS}
     ${lwipiperf_SRCS}
     ${lwipsmtp_SRCS}
     ${lwipsntp_SRCS}

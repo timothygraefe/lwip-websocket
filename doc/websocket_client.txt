@@ -1,0 +1,160 @@
+A basic websocket client for LWIP.
+
+This is a minimalist implementation of the websocket protocol, using LWIP as the
+IP layer.  It was developed to provide a websocket client capability for the
+Raspberry Pi Pico W.
+
+Interface functions:
+
+####################
+    1)  wsock_init()
+
+        Initialize the websocket client state structure.  The user must provide
+        a pointer to memory allocated for the wsock_state_t struct.
+
+        err_t
+        wsock_init(wsock_state_t *pws, int ssl_enabled, int ping_enabled, wsapp_fn hndlr);
+
+        pws             : Pointer to memory for wsock_state_t (allocated by the user).
+        ssl_enabled     : Enable SSL for the websocket
+        ping_enabled    : Enable pings from the websocket client
+        hndlr           : User-provided function to handle data received on the websocket
+
+####################
+    2)  wsock_connect()
+
+        Connect a websocket.  The user must provide an intialized websocket client
+        state struct.
+
+        err_t
+        wsock_connect(wsock_state_t *pws, const char *srvname, const char *wspath, u16_t port,
+                                   const char *bearer_token, const char *subproto,
+                                   const char *extrahdr, const char *extrahdrval);
+
+        pws             : Pointer to initialized wsock_state_t (allocated by the user)
+        srvname         : Name for the destination host (DNS or raw IP)
+        wspath          : Path to connect to on the destination host
+        port            : websocket port, e.g., 80, 8080, or 443 (SSL enabled)
+        bearer_token    : Bearer token for authorization, if required by the destination host.
+                          Optional
+        subproto        : Optional websocket sub-protocol, e.g., "chat"
+        extrahdr        : An optional extra header provided by the user
+        extrahdrval     : Value for the optional extra header provided by the user
+
+####################
+    3)  wsock_write()
+
+        Write to a websocket.  The user must provide an intialized websocket client
+        state struct, and the socket must be successfully connected.
+
+        err_t
+        wsock_write(wsock_state_t *pws, const char *buf, u16_t buflen, uint8_t opcode);
+
+####################
+    4)  wsapp_fn()
+
+        User callback function to handle received data.
+
+        typedef err_t (*wsapp_fn) (char *buf, size_t len);
+
+        buf             : buf - pointer to received data
+        len             : len - length of received data
+
+####################
+    5)  wsock_close()
+
+        Close a websocket.  The user must provide the pointer to wsock_state_t.
+        It is not an error for the wsock_state_t to be unconnected or uninitialized.
+        This does not free the memory for the wsock_state_t.
+
+        err_t
+        wsock_close(wsock_state_t *pws, wsock_result_t result, err_t err);
+
+        pws             : Pointer to wsock_state_t (allocated by user)
+
+####################
+    6)  Utility printing functions
+
+        extern const char *wsstate2str(wsock_state_t *pws);
+            Print the state of the wsock_state_t
+
+        extern const char *opcode2str(uint8_t opcode);
+            Print a string for the websocket opcode
+
+        extern const char *wsock2str(wsock_result_t resval);
+            Print a string for the websocket result status.
+
+        extern const char *err2str(err_t errval);
+            Print a string for err_t.
+
+###################################################################################
+
+Basic usage example:
+
+// Initialize and open the websocket
+static err_t myhandler(char *pb, size_t len);
+
+static
+err_t connect_to_websock()
+{
+    int ssl_enabled     = 1;
+    int ping_enabled    = 1;
+    err_t       err     = ERR_OK;
+    u16_t       port    = 443;
+    const char  *phost  = "192.168.0.10";
+    const char  *ppath  = "/dev";
+    const char  *mystr  = "Hello websocket!";
+    wsock_state_t *pws  = (wsock_state_t *) mem_malloc(sizeof(wsock_state_t));
+
+    if(!pws) return ERR_MEM;
+
+    if(ssl_enabled)
+        printf("GET wss://%s:%d%s\n", phost, port, ppath);
+    else
+        printf("GET ws://%s:%d%s\n", phost, port, ppath);
+
+    wsock_init(wsock_state_t *pws, int ssl_enabled, int ping_enabled, wsapp_fn hndlr);
+
+    printf("websocket wsock_init() err: %s(%d)\n", err2str(err), err);
+
+    if(err != ERR_OK)
+    {
+        mem_free(pws);
+        return err;
+    }
+
+    err = wsock_connect(pws, phost, ppath, port,
+                        NULL,   // bearer token (optional)
+                        NULL,   // sub protocol token (optional)
+                        NULL,   // extra header (optional)
+                        NULL);  // extra header value (optional)
+
+    printf("websocket wsock_connect() err: %s(%d)\n", err2str(err), err);
+    if(err != ERR_OK)
+    {
+        mem_free(pws);
+        return err;
+    }
+
+    // Write something to the websocket
+    err = wsock_write(pws, mystr, strlen(mystr) + 1, OPCODE_TEXT);
+
+    return err;
+}
+
+// Handle data received from the websocket
+static
+err_t myhandler(char *pb, size_t len)
+{
+    printf("Received data: \"%s\" (len=%d)", pb, len);
+    return ERR_OK;
+}
+
+// Close the websocket when done.
+void close_websock(wsock_state_t pws)
+{
+    (void) wsock_close(pws, WSOCK_RESULT_OK, ERR_OK);
+    mem_free(pws);
+}
+
+
