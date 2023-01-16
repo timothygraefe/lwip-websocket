@@ -3,7 +3,42 @@ INTRODUCTION
 lwIP is a small independent implementation of the TCP/IP protocol suite.
 
 This fork adds basic websocket client capability.  It was introduced to
-provide websocket support on the Raspberry Pi Pico W.
+provide websocket support on the Raspberry Pi Pico W.  These are the files
+changed to add the support:
+
+        modified:   src/Filelists.cmake
+        modified:   src/Filelists.mk
+
+        new file:   doc/websocket_client.txt
+        new file:   src/apps/websocket/base64-decode.c
+        new file:   src/apps/websocket/lws-sha1-base64.h
+        new file:   src/apps/websocket/sha-1.c
+        new file:   src/apps/websocket/websocket_client.c
+        new file:   src/include/lwip/apps/websocket_client.h
+
+The majority of the new code is in src/apps/websocket/websocket_client.c
+
+It provides a basic API to initiate, open, read/write, and close a websocket:
+
+        err_t
+        wsock_init(wsock_state_t *pws, int ssl_enabled, int ping_enabled, wsapp_fn hndlr);
+
+        err_t
+        wsock_connect(wsock_state_t *pws, const char *srvname, const char *wspath, u16_t port,
+                                   const char *bearer_token, const char *subproto,
+                                   const char *extrahdr, const char *extrahdrval);
+
+        err_t
+        wsock_write(wsock_state_t *pws, const char *buf, u16_t buflen, uint8_t opcode);
+        
+        // Callback for receiving data:
+        typedef err_t (*wsapp_fn) (char *buf, size_t len);
+
+        err_t
+        wsock_close(wsock_state_t *pws, wsock_result_t result, err_t err);
+
+More details are in doc/websocket_client.txt
+
 
 The focus of the lwIP TCP/IP implementation is to reduce the RAM usage
 while still having a full scale TCP. This making lwIP suitable for use
@@ -48,7 +83,6 @@ APPLICATIONS
   * MDNS (Multicast DNS) responder
   * iPerf server implementation
   * MQTT client (TLS support via altcp)
-  
   * Websocket client
 
 
