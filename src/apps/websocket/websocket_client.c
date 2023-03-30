@@ -472,12 +472,33 @@ err_t wsock_close(wsock_state_t *pws, wsock_result_t result, err_t err)
 {
     FNTRACE();
 
-    LWIP_ASSERT("pws != NULL", pws != NULL);
+    err_t   close_err = err;
+
+    if(!pws)
+    {
+        printf("wsock_close() passed NULL wsock_state_t pointer\n");
+        return ERR_CLSD;
+    }
+
+    if(pws->tcp_state == WS_TCP_CLOSED)
+    {
+        printf("wsock_close() TCP already closed\n");
+        return ERR_CLSD;
+    }
+
+    if( !(pws->pcb &&
+         (pws->state0 == PWS_STATE_INITD) && 
+         (pws->state1 == PWS_STATE_INITD)) )
+    {
+        printf("wsock_close() passed invalid wsock_state_t struct\n");
+        return ERR_ABRT;
+    }
+
+    /* LWIP_ASSERT("pws != NULL", pws != NULL);
     LWIP_ASSERT("pws->pcb != NULL", pws->pcb != NULL);
     LWIP_ASSERT("pws->state0 == alloc'd", (pws->state0 == PWS_STATE_INITD));
-    LWIP_ASSERT("pws->state1 == alloc'd", (pws->state1 == PWS_STATE_INITD));
+    LWIP_ASSERT("pws->state1 == alloc'd", (pws->state1 == PWS_STATE_INITD)); */
 
-    err_t   close_err = err;
 
     // result and err are for trace only.
     if(wsverbose)
@@ -1069,7 +1090,7 @@ wsock_tcp_poll(void *arg, struct altcp_pcb *pcb)
     if(pws->tcp_state != WS_TCP_CONNECTED)
     {
         printf("wsock_tcp_poll TCP not connected\n");
-        return ERR_OK;
+        return ERR_CLSD;
     }
 
     // Send ping, if enabled.
