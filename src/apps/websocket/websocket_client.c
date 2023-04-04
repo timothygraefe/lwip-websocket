@@ -319,13 +319,16 @@ wsock_tcp_connected(void *arg, struct altcp_pcb *pcb, err_t err)
     }
 
     // handshake was sent; we can free the request
-    if(wsverbose)
-        printf("==> FREE'ING pbuf\n");
-    pbuf_free(pws->request);
-    pws->request = NULL;
+    if(wsverbose) printf("==> FREE'ING pbuf\n");
+
+    if(pws->request != NULL)
+    {
+        pbuf_free(pws->request);
+        pws->request = NULL;
+    }
 
     // send data written to the socket
-    altcp_output(pws->pcb);
+    if(pws->pcb) altcp_output(pws->pcb);
     return ERR_OK;
 }
 
@@ -854,11 +857,28 @@ wsock_invoke_app(wsock_state_t *pws, struct pbuf *pb)
     char    *pktbuf = (char *) (pb->payload);
     char    *paybuf = pktbuf + WSHDRLEN_MIN;
     uint8_t opcode  = pktbuf[0] & WSHDRBITS_OPCODE;
-    uint8_t paylen  = pktbuf[1] & WSHDRBITS_PAYLOAD_LEN;
+    uint8_t minlen  = pktbuf[1] & WSHDRBITS_PAYLOAD_LEN;
+    size_t  paylen  = minlen;
 
     if(opcode != OPCODE_TEXT)
     {
         printf("got invalid opcode: %d\n", opcode);
+        return;
+    }
+
+    if(minlen == WSHDRBITS_PAYLOAD_LEN_EXT16)
+    {
+        // This is a "large" message, i.e., > 125 bytes.
+        // Get the length from the header extension bytes and move the
+        // payload pointer to point to the data only.
+        paybuf += WSHDRLEN_EXT16BITS;
+        paylen = ntohs(*((uint16_t *) &pktbuf[2]));
+    }
+
+    // Don't support fragmentation and large messages yet.
+    if( (minlen == WSHDRBITS_PAYLOAD_LEN_EXT64) || (paylen > WSMSG_MAXSIZE) )
+    {
+        printf("oversize websocket messages not supported\n");
         return;
     }
 
@@ -875,7 +895,11 @@ wsock_invoke_app(wsock_state_t *pws, struct pbuf *pb)
         return;
     }
 
-    if(wsverbose) printf("rcvd WS msg type: %s len %u\n", opcode2str(opcode), paylen);
+    if(wsverbose)
+    {
+        printf("rcvd WS msg type: %s len %lu\n", opcode2str(opcode), paylen);
+        wsock_hexdump(pb->payload, pb->tot_len);
+    }
 
     if(pws->message_handler)
         pws->message_handler(paybuf, paylen);
